@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMH Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #faf8f5; --white: #fff; --black: #0a0a0a;
+    --charcoal: #1a1a1a; --blush: #f2d9d0; --gold: #c9a96e;
+    --grey: #f5f3f0; --grey-mid: #d4cfc9; --grey-text: #6b6560;
+    --green: #25D366; --red: #e74c3c;
+    --font-display: 'Cormorant Garamond', serif;
+    --font-body: 'Jost', sans-serif;
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font-body); background: var(--cream); color: var(--charcoal); min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #loginScreen {
+    position: fixed; inset: 0; background: var(--black);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; flex-direction: column; gap: 2rem;
+  }
+  #loginScreen.hidden { display: none; }
+  .login-logo { font-family: var(--font-display); font-size: 2rem; color: var(--white); letter-spacing: .2em; text-transform: uppercase; }
+  .login-logo span { color: var(--gold); }
+  .login-sub { font-size: .7rem; letter-spacing: .25em; text-transform: uppercase; color: rgba(255,255,255,.35); }
+  .login-box { background: #111; padding: 2.5rem; width: 320px; display: flex; flex-direction: column; gap: 1rem; }
+  .login-box label { font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.4); }
+  .login-box input {
+    width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1); color: var(--white);
+    font-family: var(--font-body); font-size: .85rem;
+    outline: none; transition: border-color .3s;
+  }
+  .login-box input:focus { border-color: var(--gold); }
+  .login-btn {
+    background: var(--gold); color: var(--black); border: none; cursor: pointer;
+    padding: .85rem; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase;
+    font-family: var(--font-body); font-weight: 600; margin-top: .5rem;
+    transition: background .3s;
+  }
+  .login-btn:hover { background: #e8d5b0; }
+  .login-error { color: var(--red); font-size: .72rem; text-align: center; display: none; }
+
+  /* ── LAYOUT ── */
+  #app { display: none; min-height: 100vh; }
+  #app.visible { display: flex; }
+
+  aside {
+    width: 240px; min-width: 240px; background: var(--black);
+    min-height: 100vh; display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .aside-logo {
+    padding: 1.8rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .aside-logo-name { font-family: var(--font-display); font-size: 1.2rem; color: var(--white); letter-spacing: .1em; }
+  .aside-logo-sub { font-size: .55rem; letter-spacing: .25em; text-transform: uppercase; color: var(--gold); margin-top: .2rem; }
+
+  nav.aside-nav { padding: 1.5rem 0; flex: 1; }
+  .nav-section-label {
+    font-size: .52rem; letter-spacing: .3em; text-transform: uppercase;
+    color: rgba(255,255,255,.2); padding: .5rem 1.5rem; margin-bottom: .3rem;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .75rem 1.5rem; color: rgba(255,255,255,.45);
+    cursor: pointer; font-size: .78rem; transition: all .2s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--white); background: rgba(255,255,255,.04); }
+  .nav-item.active { color: var(--white); border-left-color: var(--gold); background: rgba(201,169,110,.08); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .aside-footer { padding: 1.5rem; border-top: 1px solid rgba(255,255,255,.07); }
+  .logout-btn {
+    width: 100%; background: rgba(231,76,60,.1); border: 1px solid rgba(231,76,60,.2);
+    color: #e74c3c; padding: .6rem; font-size: .65rem; letter-spacing: .15em;
+    text-transform: uppercase; font-family: var(--font-body); cursor: pointer;
+    transition: background .2s;
+  }
+  .logout-btn:hover { background: rgba(231,76,60,.2); }
+
+  main { flex: 1; padding: 2.5rem; overflow-y: auto; }
+
+  /* ── HEADER ── */
+  .page-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; }
+  .page-title { font-family: var(--font-display); font-size: 2rem; font-weight: 300; }
+  .page-title em { font-style: italic; color: var(--gold); }
+  .page-sub { font-size: .75rem; color: var(--grey-text); margin-top: .3rem; font-weight: 300; }
+
+  /* ── TABS ── */
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  /* ── STATS ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--white); padding: 1.5rem; border: 1px solid var(--grey-mid); }
+  .stat-num { font-family: var(--font-display); font-size: 2rem; color: var(--charcoal); }
+  .stat-label { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--grey-text); margin-top: .3rem; }
+  .stat-icon { font-size: 1.2rem; margin-bottom: .5rem; }
+
+  /* ── PRODUCT LIST ── */
+  .product-list { display: flex; flex-direction: column; gap: .75rem; }
+  .product-row {
+    background: var(--white); border: 1px solid var(--grey-mid);
+    display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem;
+    transition: box-shadow .2s;
+  }
+  .product-row:hover { box-shadow: 0 2px 16px rgba(0,0,0,.06); }
+  .product-row-thumb {
+    width: 60px; height: 70px; object-fit: cover; flex-shrink: 0;
+    background: var(--blush); display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; overflow: hidden;
+  }
+  .product-row-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .product-row-info { flex: 1; }
+  .product-row-name { font-weight: 500; font-size: .9rem; }
+  .product-row-price { font-family: var(--font-display); color: var(--gold); font-size: 1rem; }
+  .product-row-badge {
+    font-size: .55rem; letter-spacing: .15em; text-transform: uppercase;
+    padding: .2rem .5rem; background: var(--blush); color: #8B5E52; margin-left: .5rem;
+  }
+  .product-row-badge.new { background: var(--gold); color: var(--black); }
+  .product-row-actions { display: flex; gap: .5rem; }
+  .row-btn {
+    padding: .4rem .8rem; border: 1px solid var(--grey-mid); background: none;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    font-family: var(--font-body); cursor: pointer; transition: all .2s;
+  }
+  .row-btn.edit:hover { background: var(--charcoal); color: var(--white); border-color: var(--charcoal); }
+  .row-btn.del:hover { background: var(--red); color: var(--white); border-color: var(--red); }
+  .row-btn.wa { background: var(--green); color: white; border-color: var(--green); }
+  .row-btn.wa:hover { background: #1da851; }
+
+  /* ── ADD/EDIT FORM ── */
+  .form-card { background: var(--white); border: 1px solid var(--grey-mid); padding: 2rem; max-width: 680px; }
+  .form-title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 300; margin-bottom: 1.5rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: .4rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label.form-label { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--grey-text); font-weight: 500; }
+  .form-input, .form-select, .form-textarea {
+    padding: .7rem .9rem; border: 1px solid var(--grey-mid); background: var(--grey);
+    font-family: var(--font-body); font-size: .85rem; color: var(--charcoal);
+    outline: none; transition: border-color .2s; width: 100%;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--gold); background: var(--white); }
+  .form-textarea { resize: vertical; min-height: 90px; }
+
+  /* Image upload */
+  .img-upload-area {
+    border: 2px dashed var(--grey-mid); padding: 2rem; text-align: center;
+    cursor: pointer; transition: border-color .2s; position: relative;
+    background: var(--grey);
+  }
+  .img-upload-area:hover { border-color: var(--gold); }
+  .img-upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .img-upload-icon { font-size: 2rem; margin-bottom: .5rem; }
+  .img-upload-text { font-size: .75rem; color: var(--grey-text); }
+  .img-upload-text strong { color: var(--gold); }
+  .img-preview { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; }
+  .img-preview-item { position: relative; width: 70px; height: 80px; }
+  .img-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+  .img-preview-remove {
+    position: absolute; top: -6px; right: -6px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--red); color: white; border: none; cursor: pointer;
+    font-size: .7rem; display: flex; align-items: center; justify-content: center;
+  }
+
+  .form-actions { display: flex; gap: .75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+  .btn-save {
+    background: var(--charcoal); color: var(--white); border: none; cursor: pointer;
+    padding: .75rem 2rem; font-size: .7rem; letter-spacing: .2em; text-transform: uppercase;
+    font-family: var(--font-body); font-weight: 500; transition: background .2s;
+  }
+  .btn-save:hover { background: var(--black); }
+  .btn-cancel {
+    background: none; border: 1px solid var(--grey-mid); color: var(--charcoal);
+    padding: .75rem 1.5rem; font-size: .7rem; letter-spacing: .2em; text-transform: uppercase;
+    font-family: var(--font-body); cursor: pointer; transition: all .2s;
+  }
+  .btn-cancel:hover { border-color: var(--charcoal); }
+  .btn-add {
+    background: var(--gold); color: var(--black); border: none; cursor: pointer;
+    padding: .7rem 1.8rem; font-size: .68rem; letter-spacing: .2em; text-transform: uppercase;
+    font-family: var(--font-body); font-weight: 600; transition: background .2s;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .btn-add:hover { background: #e8d5b0; }
+
+  /* ── SETTINGS ── */
+  .settings-section { background: var(--white); border: 1px solid var(--grey-mid); padding: 2rem; max-width: 580px; margin-bottom: 1.5rem; }
+  .settings-title { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 1.2rem; }
+  .settings-row { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--charcoal); color: white;
+    padding: .9rem 1.5rem; font-size: .75rem;
+    transform: translateY(80px); opacity: 0;
+    transition: all .3s; z-index: 9999; letter-spacing: .05em;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #27ae60; }
+  .toast.error { background: var(--red); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 4rem 2rem; color: var(--grey-text); }
+  .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .4; }
+  .empty-state-text { font-family: var(--font-display); font-size: 1.2rem; font-style: italic; }
+  .empty-state-sub { font-size: .75rem; margin-top: .5rem; }
+
+  /* ── EXPORT BOX ── */
+  .export-box { background: var(--white); border: 1px solid var(--grey-mid); padding: 1.5rem; margin-bottom: 1.5rem; }
+  .export-box h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: .5rem; }
+  .export-box p { font-size: .75rem; color: var(--grey-text); margin-bottom: 1rem; line-height: 1.7; }
+  .export-btn {
+    background: var(--charcoal); color: white; border: none; cursor: pointer;
+    padding: .7rem 1.5rem; font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+    font-family: var(--font-body); transition: background .2s; display: inline-flex; align-items: center; gap: .5rem;
+  }
+  .export-btn:hover { background: var(--black); }
+
+  @media (max-width: 700px) {
+    aside { display: none; }
+    main { padding: 1.2rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-logo">EMH <span>Admin</span></div>
+  <div class="login-sub">Manage your store</div>
+  <div class="login-box">
+    <div>
+      <label>Password</label>
+      <input type="password" id="passwordInput" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div class="login-error" id="loginError">Wrong password. Try again.</div>
+    <button class="login-btn" onclick="login()">Enter Dashboard</button>
+  </div>
+  <div style="font-size:.62rem;color:rgba(255,255,255,.15);letter-spacing:.1em">Default password: emh2025</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside>
+    <div class="aside-logo">
+      <div class="aside-logo-name">EMH Collections</div>
+      <div class="aside-logo-sub">Admin Panel</div>
+    </div>
+    <nav class="aside-nav">
+      <div class="nav-section-label">Main</div>
+      <div class="nav-item active" onclick="showTab('dashboard',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showTab('products',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Products
+      </div>
+      <div class="nav-item" onclick="showTab('add',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Add New Product
+      </div>
+      <div class="nav-section-label" style="margin-top:1rem">Store</div>
+      <div class="nav-item" onclick="showTab('settings',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </div>
+      <div class="nav-item" onclick="showTab('export',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export to Website
+      </div>
+    </nav>
+    <div class="aside-footer">
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+
+    <!-- DASHBOARD TAB -->
+    <div class="tab active" id="tab-dashboard">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Welcome back, <em>Esther</em> 👑</h1>
+          <p class="page-sub">Here's what's happening with your store today.</p>
+        </div>
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+      <div style="background:var(--white);border:1px solid var(--grey-mid);padding:1.5rem;max-width:600px">
+        <div style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:1rem">Quick Actions</div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+          <button class="btn-add" onclick="showTab('add',document.querySelector('.nav-item:nth-child(3)'))">+ Add Product</button>
+          <button class="export-btn" onclick="showTab('export',null)">↓ Export Website</button>
+          <a href="https://wa.me/" target="_blank" style="text-decoration:none">
+            <button class="row-btn wa" style="padding:.7rem 1.2rem;font-size:.68rem">💬 Open WhatsApp</button>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS TAB -->
+    <div class="tab" id="tab-products">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Your <em>Products</em></h1>
+          <p class="page-sub" id="productCount">Loading...</p>
+        </div>
+        <button class="btn-add" onclick="showTab('add',null)">+ Add New Product</button>
+      </div>
+      <div class="product-list" id="productList"></div>
+    </div>
+
+    <!-- ADD / EDIT TAB -->
+    <div class="tab" id="tab-add">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title" id="formTitle">Add New <em>Product</em></h1>
+          <p class="page-sub">Fill in the details below. All fields marked * are required.</p>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Product Name *</label>
+            <input type="text" class="form-input" id="f_name" placeholder="e.g. Tailored Corset Midi Dress">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Price *</label>
+            <input type="text" class="form-input" id="f_price" placeholder="e.g. ₦38,000">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Description *</label>
+            <textarea class="form-textarea" id="f_desc" placeholder="Describe the product — fabric, style, occasion, available colours..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Badge / Label</label>
+            <select class="form-select" id="f_badge">
+              <option value="">None</option>
+              <option value="New">New</option>
+              <option value="Bestseller">Bestseller</option>
+              <option value="Popular">Popular</option>
+              <option value="Limited">Limited</option>
+              <option value="Sold Out">Sold Out</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Section</label>
+            <select class="form-select" id="f_section">
+              <option value="featured">Featured Collection</option>
+              <option value="arrivals">New Arrivals</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Available Sizes (tick all that apply)</label>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.3rem" id="sizesCheck">
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="XS"> XS</label>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="S"> S</label>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="M" checked> M</label>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="L" checked> L</label>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="XL"> XL</label>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="2XL"> 2XL</label>
+              <label style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;cursor:pointer"><input type="checkbox" value="Custom" checked> Custom</label>
+            </div>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Product Photo(s)</label>
+            <div class="img-upload-area" id="dropZone">
+              <input type="file" accept="image/*" multiple onchange="handleImages(event)" id="imgInput">
+              <div class="img-upload-icon">📸</div>
+              <div class="img-upload-text">
+                <strong>Click to upload</strong> or drag & drop your photos here<br>
+                <span style="font-size:.65rem">JPG, PNG, WEBP — up to 5 photos</span>
+              </div>
+            </div>
+            <div class="img-preview" id="imgPreview"></div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveProduct()">Save Product</button>
+          <button class="btn-cancel" onclick="cancelForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab" id="tab-settings">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Store <em>Settings</em></h1>
+          <p class="page-sub">Update your contact details and store information.</p>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">Contact & Social</div>
+        <div class="settings-row">
+          <label class="form-label">WhatsApp Number (with country code, no +)</label>
+          <input type="text" class="form-input" id="s_wa" placeholder="e.g. 2348012345678">
+        </div>
+        <div class="settings-row">
+          <label class="form-label">TikTok Handle</label>
+          <input type="text" class="form-input" id="s_tiktok" placeholder="@emh_collection">
+        </div>
+        <div class="settings-row">
+          <label class="form-label">Instagram Handle</label>
+          <input type="text" class="form-input" id="s_ig" placeholder="@emh_collection">
+        </div>
+        <button class="btn-save" onclick="saveSettings()">Save Settings</button>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">Change Password</div>
+        <div class="settings-row">
+          <label class="form-label">Current Password</label>
+          <input type="password" class="form-input" id="s_oldpw" placeholder="Current password">
+        </div>
+        <div class="settings-row">
+          <label class="form-label">New Password</label>
+          <input type="password" class="form-input" id="s_newpw" placeholder="New password">
+        </div>
+        <button class="btn-save" onclick="changePassword()">Change Password</button>
+      </div>
+    </div>
+
+    <!-- EXPORT TAB -->
+    <div class="tab" id="tab-export">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Export <em>Website</em></h1>
+          <p class="page-sub">Download your updated website file to publish live.</p>
+        </div>
+      </div>
+      <div class="export-box">
+        <h3>How it works</h3>
+        <p>
+          1. Add all your products and update settings here.<br>
+          2. Click "Download Website" below — it generates your updated <code>index.html</code> with all your products baked in.<br>
+          3. Upload the new file to Netlify (just drag & drop to replace the old one).<br>
+          4. Your live website is updated instantly. ✨
+        </p>
+        <button class="export-btn" onclick="exportWebsite()">↓ Download Website (index.html)</button>
+      </div>
+      <div class="export-box">
+        <h3>Publish to Netlify</h3>
+        <p>
+          Go to <strong>netlify.com</strong> → your site dashboard → <strong>Deploys</strong> tab → drag your downloaded file onto the deploy area. Done!<br><br>
+          No coding. No confusion. Takes 30 seconds.
+        </p>
+        <a href="https://netlify.com" target="_blank"><button class="export-btn">Open Netlify →</button></a>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+const DEFAULT_PW = 'emh2025';
+let state = {
+  products: [],
+  settings: { wa: '2349000000000', tiktok: '@emh_collection', ig: '@emh_collection' },
+  password: DEFAULT_PW
+};
+let editingId = null;
+let pendingImages = []; // base64 images for current form
+
+// ── PERSIST ──
+function save() { localStorage.setItem('emh_admin', JSON.stringify(state)); }
+function load() {
+  const d = localStorage.getItem('emh_admin');
+  if (d) state = { ...state, ...JSON.parse(d) };
+}
+
+// ── LOGIN ──
+function login() {
+  const val = document.getElementById('passwordInput').value;
+  if (val === state.password) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    renderAll();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+  }
+}
+function logout() {
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+// ── TABS ──
+function showTab(name, navEl) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  if (name === 'products') renderProductList();
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'add' && !editingId) clearForm();
+  if (name === 'settings') loadSettingsForm();
+}
+
+// ── TOAST ──
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const stats = [
+    { num: state.products.length, label: 'Total Products', icon: '👗' },
+    { num: state.products.filter(p => p.badge === 'New').length, label: 'New Arrivals', icon: '✨' },
+    { num: state.products.filter(p => p.section === 'featured').length, label: 'Featured', icon: '⭐' },
+    { num: state.products.filter(p => p.badge === 'Sold Out').length, label: 'Sold Out', icon: '🔴' }
+  ];
+  document.getElementById('statsRow').innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-icon">${s.icon}</div>
+      <div class="stat-num">${s.num}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>
+  `).join('');
+}
+
+// ── PRODUCT LIST ──
+function renderProductList() {
+  const list = document.getElementById('productList');
+  document.getElementById('productCount').textContent = `${state.products.length} product${state.products.length !== 1 ? 's' : ''} in your store`;
+  if (!state.products.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">👗</div><div class="empty-state-text">No products yet</div><div class="empty-state-sub">Click "Add New Product" to get started</div></div>`;
+    return;
+  }
+  list.innerHTML = state.products.map((p, i) => `
+    <div class="product-row">
+      <div class="product-row-thumb">
+        ${p.images && p.images[0] ? `<img src="${p.images[0]}" alt="${p.name}">` : '👗'}
+      </div>
+      <div class="product-row-info">
+        <div class="product-row-name">
+          ${p.name}
+          ${p.badge ? `<span class="product-row-badge ${p.badge==='New'?'new':''}">${p.badge}</span>` : ''}
+        </div>
+        <div class="product-row-price">${p.price}</div>
+        <div style="font-size:.68rem;color:var(--grey-text);margin-top:.2rem">${p.section === 'featured' ? 'Featured Collection' : 'New Arrivals'} · Sizes: ${(p.sizes||[]).join(', ') || 'Not set'}</div>
+      </div>
+      <div class="product-row-actions">
+        <button class="row-btn wa" onclick="quickOrder(${i})">💬 Order</button>
+        <button class="row-btn edit" onclick="editProduct(${i})">Edit</button>
+        <button class="row-btn del" onclick="deleteProduct(${i})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── ADD / EDIT ──
+function clearForm() {
+  editingId = null; pendingImages = [];
+  document.getElementById('formTitle').innerHTML = 'Add New <em>Product</em>';
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_price').value = '';
+  document.getElementById('f_desc').value = '';
+  document.getElementById('f_badge').value = '';
+  document.getElementById('f_section').value = 'featured';
+  document.querySelectorAll('#sizesCheck input').forEach(cb => { cb.checked = ['M','L','Custom'].includes(cb.value); });
+  document.getElementById('imgPreview').innerHTML = '';
+}
+
+function editProduct(i) {
+  const p = state.products[i];
+  editingId = i;
+  pendingImages = p.images ? [...p.images] : [];
+  document.getElementById('formTitle').innerHTML = 'Edit <em>Product</em>';
+  document.getElementById('f_name').value = p.name;
+  document.getElementById('f_price').value = p.price;
+  document.getElementById('f_desc').value = p.desc;
+  document.getElementById('f_badge').value = p.badge || '';
+  document.getElementById('f_section').value = p.section || 'featured';
+  document.querySelectorAll('#sizesCheck input').forEach(cb => { cb.checked = (p.sizes||[]).includes(cb.value); });
+  renderImagePreview();
+  showTab('add', null);
+}
+
+function saveProduct() {
+  const name = document.getElementById('f_name').value.trim();
+  const price = document.getElementById('f_price').value.trim();
+  const desc = document.getElementById('f_desc').value.trim();
+  if (!name || !price || !desc) { toast('Please fill in name, price, and description.', 'error'); return; }
+
+  const sizes = [...document.querySelectorAll('#sizesCheck input:checked')].map(cb => cb.value);
+  const product = {
+    name, price, desc,
+    badge: document.getElementById('f_badge').value,
+    section: document.getElementById('f_section').value,
+    sizes,
+    images: [...pendingImages],
+    id: editingId !== null ? state.products[editingId].id : Date.now()
+  };
+
+  if (editingId !== null) {
+    state.products[editingId] = product;
+    toast('Product updated! ✨');
+  } else {
+    state.products.push(product);
+    toast('Product added! 🎉');
+  }
+  save();
+  clearForm();
+  showTab('products', document.querySelector('.nav-item:nth-child(2)'));
+  renderProductList();
+}
+
+function deleteProduct(i) {
+  if (!confirm(`Delete "${state.products[i].name}"? This can't be undone.`)) return;
+  state.products.splice(i, 1);
+  save(); toast('Product deleted.', 'error');
+  renderProductList();
+}
+
+function cancelForm() {
+  clearForm();
+  showTab('products', null);
+}
+
+// ── IMAGE HANDLING ──
+function handleImages(e) {
+  const files = Array.from(e.target.files);
+  files.slice(0, 5 - pendingImages.length).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingImages.push(ev.target.result);
+      renderImagePreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+function renderImagePreview() {
+  const preview = document.getElementById('imgPreview');
+  preview.innerHTML = pendingImages.map((src, i) => `
+    <div class="img-preview-item">
+      <img src="${src}" alt="Product photo ${i+1}">
+      <button class="img-preview-remove" onclick="removeImage(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeImage(i) {
+  pendingImages.splice(i, 1);
+  renderImagePreview();
+}
+
+// ── QUICK ORDER ──
+function quickOrder(i) {
+  const p = state.products[i];
+  const wa = state.settings.wa || '2349000000000';
+  const msg = `Hello EMH Collections! 👗\n\nI'm interested in:\n\n*Product:* ${p.name}\n*Price:* ${p.price}\n\nPlease let me know availability. Thank you! ✨`;
+  window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── SETTINGS ──
+function loadSettingsForm() {
+  document.getElementById('s_wa').value = state.settings.wa || '';
+  document.getElementById('s_tiktok').value = state.settings.tiktok || '';
+  document.getElementById('s_ig').value = state.settings.ig || '';
+}
+
+function saveSettings() {
+  state.settings.wa = document.getElementById('s_wa').value.trim();
+  state.settings.tiktok = document.getElementById('s_tiktok').value.trim();
+  state.settings.ig = document.getElementById('s_ig').value.trim();
+  save(); toast('Settings saved! ✅');
+}
+
+function changePassword() {
+  const old = document.getElementById('s_oldpw').value;
+  const nw = document.getElementById('s_newpw').value;
+  if (old !== state.password) { toast('Current password is wrong.', 'error'); return; }
+  if (nw.length < 4) { toast('New password must be at least 4 characters.', 'error'); return; }
+  state.password = nw; save();
+  document.getElementById('s_oldpw').value = ''; document.getElementById('s_newpw').value = '';
+  toast('Password changed! 🔐');
+}
+
+// ── EXPORT ──
+function exportWebsite() {
+  const wa = state.settings.wa || '2349000000000';
+  const tiktok = (state.settings.tiktok || '@emh_collection').replace('@','');
+  const ig = (state.settings.ig || '@emh_collection').replace('@','');
+
+  const productsJS = JSON.stringify(state.products, null, 2);
+
+  // Build the full HTML (trimmed version of index.html with injected products)
+  const html = buildWebsiteHTML(productsJS, wa, tiktok, ig);
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'index.html'; a.click();
+  toast('Website downloaded! Upload to Netlify to go live. 🚀');
+}
+
+function buildWebsiteHTML(productsJS, wa, tiktok, ig) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="EMH Collections – Premium African fashion boutique. Designed by chemistry.">
+<title>EMH Collections | Premium Fashion Boutique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#faf8f5;--white:#ffffff;--black:#0a0a0a;--charcoal:#1a1a1a;--blush:#f2d9d0;--blush-dark:#e8c4b8;--gold:#c9a96e;--gold-light:#e8d5b0;--grey-light:#f5f3f0;--grey-mid:#d4cfc9;--grey-text:#6b6560;--font-display:'Cormorant Garamond',serif;--font-body:'Jost',sans-serif;--nav-h:72px;--transition:0.4s cubic-bezier(0.25,0.46,0.45,0.94)}
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:var(--font-body);background:var(--cream);color:var(--charcoal);overflow-x:hidden;cursor:none}
+  .cursor{width:10px;height:10px;background:var(--charcoal);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .1s ease,width .3s ease,height .3s ease,background .3s ease}
+  .cursor-ring{width:36px;height:36px;border:1px solid var(--charcoal);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:transform .18s ease,width .3s ease,height .3s ease,opacity .3s ease;opacity:.5}
+  .cursor.hover{width:6px;height:6px;background:var(--gold)}.cursor-ring.hover{width:52px;height:52px;border-color:var(--gold);opacity:.3}
+  @media(hover:none){.cursor,.cursor-ring{display:none}body{cursor:auto}}
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,4rem);background:rgba(250,248,245,.92);backdrop-filter:blur(12px);border-bottom:1px solid transparent;transition:border-color var(--transition)}
+  nav.scrolled{border-color:var(--grey-mid)}
+  .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--black)}
+  .nav-logo svg{width:38px;height:38px}.nav-logo-text{font-family:var(--font-display);font-size:1.2rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase}
+  .nav-links{display:flex;gap:2.5rem;list-style:none}
+  .nav-links a{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--charcoal);text-decoration:none;font-weight:400;position:relative;padding-bottom:2px}
+  .nav-links a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--gold);transition:width var(--transition)}
+  .nav-links a:hover::after{width:100%}
+  .nav-cta{background:var(--black);color:var(--white);padding:.55rem 1.4rem;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;font-family:var(--font-body);transition:background var(--transition),color var(--transition);border:1px solid var(--black)}
+  .nav-cta:hover{background:transparent;color:var(--black)}
+  .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
+  .hamburger span{width:24px;height:1px;background:var(--charcoal);transition:var(--transition);display:block}
+  .mobile-nav{position:fixed;top:var(--nav-h);left:0;right:0;bottom:0;background:var(--cream);z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;transform:translateX(100%);transition:transform var(--transition)}
+  .mobile-nav.open{transform:translateX(0)}.mobile-nav a{font-family:var(--font-display);font-size:2rem;color:var(--charcoal);text-decoration:none;letter-spacing:.06em}
+  #hero{height:100svh;min-height:600px;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+  .hero-left{background:var(--black);display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(2rem,6vw,5rem);padding-bottom:clamp(3rem,8vh,7rem);position:relative;overflow:hidden}
+  .hero-left::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1a1a1a 0%,#0a0a0a 60%,#2a1a15 100%);z-index:0}
+  .hero-tag{font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);font-weight:400;margin-bottom:1.2rem;position:relative;z-index:1;animation:fadeUp 1s ease .3s both}
+  .hero-heading{font-family:var(--font-display);font-size:clamp(3rem,7vw,6rem);color:var(--white);line-height:1;font-weight:300;position:relative;z-index:1;animation:fadeUp 1s ease .5s both}
+  .hero-heading em{font-style:italic;color:var(--gold-light)}
+  .hero-sub{margin-top:1.5rem;font-size:.8rem;color:rgba(255,255,255,.5);letter-spacing:.12em;line-height:1.8;position:relative;z-index:1;animation:fadeUp 1s ease .7s both}
+  .hero-actions{margin-top:2.5rem;display:flex;gap:1rem;align-items:center;position:relative;z-index:1;animation:fadeUp 1s ease .9s both}
+  .btn-primary{background:var(--gold);color:var(--black);padding:.9rem 2.2rem;font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;font-family:var(--font-body);font-weight:500;border:none;cursor:pointer;transition:background var(--transition),transform var(--transition);display:inline-block}
+  .btn-primary:hover{background:var(--gold-light);transform:translateY(-2px)}
+  .btn-ghost{color:rgba(255,255,255,.6);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;font-family:var(--font-body);display:flex;align-items:center;gap:.5rem;transition:color var(--transition)}
+  .btn-ghost:hover{color:var(--white)}.btn-ghost svg{width:16px;height:16px}
+  .hero-right{position:relative;overflow:hidden;background:var(--blush)}
+  .hero-img-fill{position:absolute;inset:0;background:linear-gradient(160deg,var(--blush) 0%,var(--blush-dark) 50%,#d4a898 100%);display:flex;align-items:center;justify-content:center}
+  .hero-fashion-illustration{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative}
+  .hero-fashion-illustration svg{width:70%;max-width:380px}
+  .hero-scroll-hint{position:absolute;bottom:2rem;right:2rem;font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;color:var(--grey-text);writing-mode:vertical-rl;display:flex;align-items:center;gap:.8rem}
+  .hero-scroll-hint::before{content:'';width:1px;height:50px;background:var(--grey-mid);display:block}
+  .marquee-strip{background:var(--black);color:var(--gold);padding:.8rem 0;overflow:hidden;border-top:1px solid var(--charcoal);border-bottom:1px solid var(--charcoal)}
+  .marquee-inner{display:flex;gap:3rem;animation:marquee 22s linear infinite;white-space:nowrap;width:max-content}
+  .marquee-inner span{font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;font-weight:400}
+  .marquee-inner .sep{color:rgba(201,169,110,.4)}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  section{padding:clamp(4rem,10vh,8rem) clamp(1.5rem,5vw,4rem)}
+  .section-label{font-size:.62rem;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:.8rem}
+  .section-title{font-family:var(--font-display);font-size:clamp(2rem,4vw,3.5rem);font-weight:300;line-height:1.15;color:var(--charcoal)}
+  .section-title em{font-style:italic}.section-desc{margin-top:1rem;color:var(--grey-text);font-size:.82rem;line-height:1.9;max-width:480px;font-weight:300}
+  #collection{background:var(--white)}
+  .collection-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1.5rem;margin-bottom:3rem}
+  .view-all{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--charcoal);text-decoration:none;border-bottom:1px solid var(--charcoal);padding-bottom:2px;transition:color var(--transition),border-color var(--transition)}
+  .view-all:hover{color:var(--gold);border-color:var(--gold)}
+  .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:1.5rem}
+  .product-card{background:var(--cream);position:relative;overflow:hidden;cursor:pointer;transition:transform var(--transition)}
+  .product-card:hover{transform:translateY(-4px)}
+  .product-img-wrap{aspect-ratio:3/4;overflow:hidden;position:relative;background:var(--grey-light)}
+  .product-img-wrap img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.25,.46,.45,.94)}
+  .product-card:hover .product-img-wrap img{transform:scale(1.06)}
+  .product-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  .product-placeholder svg{width:80px;height:80px;opacity:.3}
+  .product-badge{position:absolute;top:1rem;left:1rem;background:var(--black);color:var(--white);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;padding:.3rem .7rem;font-weight:500}
+  .product-badge.new{background:var(--gold);color:var(--black)}
+  .product-actions{position:absolute;bottom:1rem;right:1rem;display:flex;flex-direction:column;gap:.5rem;transform:translateX(60px);opacity:0;transition:transform var(--transition),opacity var(--transition)}
+  .product-card:hover .product-actions{transform:translateX(0);opacity:1}
+  .product-action-btn{width:40px;height:40px;background:var(--white);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:background var(--transition)}
+  .product-action-btn:hover{background:var(--black)}.product-action-btn:hover svg{stroke:var(--white)}
+  .product-action-btn svg{width:16px;height:16px;stroke:var(--charcoal);fill:none;stroke-width:1.5}
+  .product-info{padding:1.2rem .2rem .5rem}
+  .product-name{font-family:var(--font-display);font-size:1.05rem;font-weight:500;color:var(--charcoal);margin-bottom:.3rem}
+  .product-desc{font-size:.72rem;color:var(--grey-text);line-height:1.7;margin-bottom:.6rem;font-weight:300}
+  .product-footer{display:flex;justify-content:space-between;align-items:center}
+  .product-price{font-family:var(--font-display);font-size:1.1rem;color:var(--charcoal);font-weight:400}
+  .product-order-btn{background:#25D366;color:white;border:none;cursor:pointer;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;padding:.45rem .9rem;font-family:var(--font-body);font-weight:500;display:flex;align-items:center;gap:.4rem;transition:background var(--transition)}
+  .product-order-btn:hover{background:#1da851}.product-order-btn svg{width:13px;height:13px;fill:white}
+  #arrivals{background:var(--charcoal)}#arrivals .section-label{color:var(--gold)}#arrivals .section-title{color:var(--white)}#arrivals .section-desc{color:rgba(255,255,255,.45)}
+  .arrivals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr));gap:1rem;margin-top:3rem}
+  .arrival-card{position:relative;overflow:hidden;cursor:pointer;aspect-ratio:2/3;background:#2a2a2a}
+  .arrival-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+  .arrival-img{width:100%;height:100%;object-fit:cover}
+  .arrival-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,transparent 50%);display:flex;flex-direction:column;justify-content:flex-end;padding:1.5rem;opacity:0;transition:opacity var(--transition)}
+  .arrival-card:hover .arrival-overlay{opacity:1}
+  .arrival-overlay .product-name{color:var(--white);font-size:1rem;font-family:var(--font-display)}
+  .arrival-overlay .product-price{color:var(--gold);font-size:.95rem;font-family:var(--font-display)}
+  .arrival-label{position:absolute;top:1rem;left:1rem;background:var(--gold);color:var(--black);font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;padding:.25rem .6rem;font-weight:500}
+  #about{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;background:var(--cream)}
+  .about-visual{position:relative;aspect-ratio:4/5;background:var(--blush);display:flex;align-items:center;justify-content:center}
+  .about-visual::before{content:'';position:absolute;top:-1.5rem;left:-1.5rem;right:1.5rem;bottom:1.5rem;border:1px solid var(--grey-mid);z-index:0}
+  .about-visual-inner{position:relative;z-index:1;width:85%;height:85%;background:linear-gradient(145deg,var(--blush-dark),#c8a090);display:flex;align-items:center;justify-content:center}
+  .about-stat{position:absolute;bottom:-1.5rem;right:-1.5rem;background:var(--black);color:var(--white);padding:1.5rem 2rem;z-index:2}
+  .about-stat-num{font-family:var(--font-display);font-size:2.5rem;font-weight:300;color:var(--gold);line-height:1}
+  .about-stat-label{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;margin-top:.3rem;opacity:.6}
+  .about-values{margin-top:2.5rem;display:flex;flex-direction:column;gap:1.2rem}
+  .about-value{display:flex;gap:1rem;align-items:flex-start}
+  .about-value-icon{width:36px;height:36px;background:var(--blush);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .about-value-icon svg{width:16px;height:16px;stroke:var(--gold);fill:none;stroke-width:1.5}
+  .about-value-title{font-size:.78rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem}
+  .about-value-desc{font-size:.76rem;color:var(--grey-text);line-height:1.7;font-weight:300}
+  #testimonials{background:var(--grey-light)}
+  .testimonials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:1.5rem;margin-top:3rem}
+  .testimonial-card{background:var(--white);padding:2rem;position:relative}
+  .testimonial-card::before{content:'\\201C';font-family:var(--font-display);font-size:5rem;line-height:1;color:var(--gold);opacity:.3;position:absolute;top:.5rem;left:1.5rem}
+  .testimonial-text{font-family:var(--font-display);font-size:1rem;font-style:italic;line-height:1.8;color:var(--charcoal);margin-top:1rem}
+  .testimonial-author{margin-top:1.5rem;display:flex;align-items:center;gap:.8rem}
+  .testimonial-avatar{width:42px;height:42px;border-radius:50%;background:var(--blush);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:1.1rem;color:var(--gold-light)}
+  .testimonial-name{font-size:.75rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+  .testimonial-role{font-size:.65rem;color:var(--grey-text);margin-top:.15rem}
+  .testimonial-stars{color:var(--gold);font-size:.75rem;letter-spacing:.1em;margin-bottom:.3rem}
+  #contact{background:var(--black);color:var(--white);display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center}
+  #contact .section-label{color:var(--gold)}#contact .section-title{color:var(--white)}#contact .section-desc{color:rgba(255,255,255,.45)}
+  .contact-links{margin-top:2.5rem;display:flex;flex-direction:column;gap:1rem}
+  .contact-link{display:flex;align-items:center;gap:1rem;text-decoration:none;color:var(--white);padding:1.2rem 1.5rem;border:1px solid rgba(255,255,255,.1);transition:border-color var(--transition),background var(--transition)}
+  .contact-link:hover{border-color:var(--gold);background:rgba(201,169,110,.06)}
+  .contact-link-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);flex-shrink:0}
+  .contact-link-icon svg{width:20px;height:20px}
+  .contact-link-label{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:.2rem}
+  .contact-link-val{font-size:.9rem}
+  .contact-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem}
+  .contact-brand-display{text-align:center}.contact-brand-display svg{width:100px;height:100px;opacity:.8}
+  .contact-brand-name{font-family:var(--font-display);font-size:2rem;color:var(--white);letter-spacing:.15em;text-transform:uppercase;margin-top:1rem}
+  .contact-brand-sub{font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-top:.3rem}
+  .contact-socials{display:flex;gap:1rem}
+  .social-btn{width:48px;height:48px;border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--white);transition:border-color var(--transition),background var(--transition)}
+  .social-btn:hover{border-color:var(--gold);background:rgba(201,169,110,.1)}.social-btn svg{width:18px;height:18px}
+  footer{background:var(--charcoal);padding:clamp(2rem,5vh,4rem) clamp(1.5rem,5vw,4rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;border-top:1px solid rgba(255,255,255,.06)}
+  .footer-logo{display:flex;align-items:center;gap:.8rem}.footer-logo svg{width:30px;height:30px}
+  .footer-logo-text{font-family:var(--font-display);font-size:1rem;color:var(--white);letter-spacing:.15em;text-transform:uppercase}
+  .footer-copy{font-size:.65rem;color:rgba(255,255,255,.3);letter-spacing:.1em}
+  .footer-links{display:flex;gap:1.5rem}
+  .footer-links a{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);text-decoration:none;transition:color var(--transition)}
+  .footer-links a:hover{color:var(--gold)}
+  .wa-float{position:fixed;bottom:2rem;right:2rem;z-index:150;width:56px;height:56px;border-radius:50%;background:#25D366;color:white;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 4px 20px rgba(37,211,102,.4);transition:transform var(--transition),box-shadow var(--transition)}
+  .wa-float:hover{transform:scale(1.1);box-shadow:0 8px 28px rgba(37,211,102,.5)}.wa-float svg{width:28px;height:28px;fill:white}
+  .reveal{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s ease}.reveal.visible{opacity:1;transform:translateY(0)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:900px){#hero{grid-template-columns:1fr}.hero-right{display:none}.hero-left{min-height:100svh;justify-content:center}#about,#contact{grid-template-columns:1fr;gap:3rem}.about-visual{display:none}.nav-links,.nav-cta{display:none}.hamburger{display:flex}}
+  @media(max-width:480px){.products-grid{grid-template-columns:repeat(2,1fr);gap:.8rem}}
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<a href="https://wa.me/${wa}?text=Hello%20EMH%20Collections!%20I%27d%20like%20to%20enquire%20about%20your%20designs." class="wa-float" target="_blank">
+  <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+</a>
+<nav id="navbar">
+  <a href="#hero" class="nav-logo">
+    <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="19" stroke="#0a0a0a" stroke-width="1"/><path d="M8 15 Q12 8 20 8 Q28 8 32 15" stroke="#0a0a0a" stroke-width="1" fill="none"/><path d="M14 28 L14 12 M14 20 L20 20 M26 12 L26 28" stroke="#0a0a0a" stroke-width="1.2" stroke-linecap="round"/><path d="M8 28 Q12 34 20 34 Q28 34 32 28" stroke="#c9a96e" stroke-width="1" fill="none"/></svg>
+    <span class="nav-logo-text">EMH Collections</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#collection">Collections</a></li>
+    <li><a href="#arrivals">New Arrivals</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="https://wa.me/${wa}" class="nav-cta" target="_blank">Order Now</a>
+  <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="#collection" onclick="this.closest('.mobile-nav').classList.remove('open')">Collections</a>
+  <a href="#arrivals" onclick="this.closest('.mobile-nav').classList.remove('open')">New Arrivals</a>
+  <a href="#about" onclick="this.closest('.mobile-nav').classList.remove('open')">About</a>
+  <a href="#contact" onclick="this.closest('.mobile-nav').classList.remove('open')">Contact</a>
+  <a href="https://wa.me/${wa}" target="_blank">Order on WhatsApp</a>
+</div>
+<section id="hero">
+  <div class="hero-left">
+    <p class="hero-tag">Designed by Chemistry ✦ Made to Slay</p>
+    <h1 class="hero-heading">Where Style<br>Meets <em>Identity</em></h1>
+    <p class="hero-sub">Bespoke fashion crafted with passion.<br>Every stitch tells your story.</p>
+    <div class="hero-actions">
+      <a href="#collection" class="btn-primary">Shop the Collection</a>
+      <a href="#about" class="btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Our Story</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-img-fill">
+      <div class="hero-fashion-illustration">
+        <svg viewBox="0 0 300 400" fill="none"><ellipse cx="150" cy="60" rx="30" ry="35" fill="#c8a090" opacity="0.6"/><path d="M120 90 Q100 130 90 180 Q80 230 85 320 Q95 360 150 365 Q205 360 215 320 Q220 230 210 180 Q200 130 180 90" fill="#8B5E52" opacity="0.7"/><path d="M120 90 Q130 110 150 115 Q170 110 180 90" fill="#c8a090" opacity="0.5"/><text x="30" y="350" font-size="20" fill="#fff" opacity="0.3">✦</text><text x="240" y="100" font-size="14" fill="#fff" opacity="0.3">✦</text></svg>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">Scroll to explore</div>
+  </div>
+</section>
+<div class="marquee-strip"><div class="marquee-inner"><span>EMH Collections</span><span class="sep">✦</span><span>Bespoke Fashion</span><span class="sep">✦</span><span>Designed by Chemistry</span><span class="sep">✦</span><span>Made to Slay</span><span class="sep">✦</span><span>Big Things Start Small</span><span class="sep">✦</span><span>Everybody Must Slay</span><span class="sep">✦</span><span>EMH Collections</span><span class="sep">✦</span><span>Bespoke Fashion</span><span class="sep">✦</span><span>Designed by Chemistry</span><span class="sep">✦</span><span>Made to Slay</span><span class="sep">✦</span><span>Big Things Start Small</span><span class="sep">✦</span><span>Everybody Must Slay</span><span class="sep">✦</span></div></div>
+<section id="collection">
+  <div class="collection-header">
+    <div><p class="section-label reveal">Featured Collection</p><h2 class="section-title reveal">The <em>Signature</em> Edit</h2></div>
+    <a href="#collection" class="view-all reveal">View All Designs</a>
+  </div>
+  <div class="products-grid" id="productsGrid"></div>
+</section>
+<section id="arrivals">
+  <p class="section-label">Just Dropped</p>
+  <h2 class="section-title reveal">New <em>Arrivals</em></h2>
+  <p class="section-desc reveal">Fresh off the needle — our latest designs are here.</p>
+  <div class="arrivals-grid reveal" id="arrivalsGrid"></div>
+</section>
+<section id="about">
+  <div class="about-visual reveal">
+    <div class="about-visual-inner"><svg viewBox="0 0 200 200" fill="none"><path d="M30 60 L30 140 M30 100 L80 100 M80 60 L80 140" stroke="#8B5E52" stroke-width="3" stroke-linecap="round"/><path d="M100 60 L120 140 L140 60 L160 140" stroke="#8B5E52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="about-stat"><div class="about-stat-num">500+</div><div class="about-stat-label">Happy Clients</div></div>
+  </div>
+  <div>
+    <p class="section-label reveal">Our Story</p>
+    <h2 class="section-title reveal">Fashion Born<br>from <em>Chemistry</em></h2>
+    <p class="section-desc reveal">EMH Collections is more than a fashion brand — it's a movement. Founded by Esther, blending the precision of chemistry with the artistry of fashion. Every piece is crafted to make you feel powerful, elegant, and undeniably you.</p>
+    <div class="about-values">
+      <div class="about-value reveal"><div class="about-value-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div><div><div class="about-value-title">Bespoke Quality</div><div class="about-value-desc">Every garment is made-to-measure for a perfect fit.</div></div></div>
+      <div class="about-value reveal"><div class="about-value-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div><div class="about-value-title">Crafted with Love</div><div class="about-value-desc">Heart and chemistry in every design we create.</div></div></div>
+    </div>
+  </div>
+</section>
+<section id="testimonials">
+  <p class="section-label reveal">Client Love</p>
+  <h2 class="section-title reveal">What They're <em>Saying</em></h2>
+  <div class="testimonials-grid">
+    <div class="testimonial-card reveal"><div class="testimonial-stars">★★★★★</div><p class="testimonial-text">"Esther outdid herself with my bridesmaid dresses. Every girl felt like a queen. The fit, the fabric — absolutely world class!"</p><div class="testimonial-author"><div class="testimonial-avatar">A</div><div><div class="testimonial-name">Adaeze O.</div><div class="testimonial-role">Bride · Lagos</div></div></div></div>
+    <div class="testimonial-card reveal"><div class="testimonial-stars">★★★★★</div><p class="testimonial-text">"I'm obsessed with my custom gown. She took my measurements and the result was absolutely perfect. 10/10 would recommend!"</p><div class="testimonial-author"><div class="testimonial-avatar">F</div><div><div class="testimonial-name">Fatima K.</div><div class="testimonial-role">Client · Abuja</div></div></div></div>
+    <div class="testimonial-card reveal"><div class="testimonial-stars">★★★★★</div><p class="testimonial-text">"EMH Collections is the real deal — professional, fast, and the quality is unmatched. Ordering was seamless via WhatsApp!"</p><div class="testimonial-author"><div class="testimonial-avatar">C</div><div><div class="testimonial-name">Chioma N.</div><div class="testimonial-role">Client · Port Harcourt</div></div></div></div>
+  </div>
+</section>
+<section id="contact">
+  <div>
+    <p class="section-label">Get in Touch</p>
+    <h2 class="section-title reveal">Let's Create<br>Something <em>Beautiful</em></h2>
+    <p class="section-desc reveal">Ready to slay? Reach out and let's bring your fashion vision to life.</p>
+    <div class="contact-links">
+      <a href="https://wa.me/${wa}" class="contact-link reveal" target="_blank"><div class="contact-link-icon"><svg viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div><div><div class="contact-link-label">WhatsApp</div><div class="contact-link-val">+${wa}</div></div></a>
+      <a href="https://www.tiktok.com/@${tiktok}" class="contact-link reveal" target="_blank"><div class="contact-link-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.19a8.12 8.12 0 004.74 1.52V6.27a4.85 4.85 0 01-.97-.58z"/></svg></div><div><div class="contact-link-label">TikTok</div><div class="contact-link-val">@${tiktok}</div></div></a>
+      <a href="https://www.instagram.com/${ig}" class="contact-link reveal" target="_blank"><div class="contact-link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></div><div><div class="contact-link-label">Instagram</div><div class="contact-link-val">@${ig}</div></div></a>
+    </div>
+  </div>
+  <div class="contact-right reveal">
+    <div class="contact-brand-display">
+      <svg viewBox="0 0 140 140" fill="none"><circle cx="70" cy="70" r="68" stroke="#c9a96e" stroke-width="1"/><circle cx="70" cy="70" r="58" stroke="rgba(201,169,110,0.3)" stroke-width="0.5"/><g transform="translate(25,30)"><line x1="20" y1="0" x2="50" y2="50" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"/><line x1="30" y1="0" x2="60" y2="50" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="0" r="8" stroke="#c9a96e" stroke-width="1.5" fill="none"/><circle cx="26" cy="0" r="8" stroke="#c9a96e" stroke-width="1.5" fill="none"/><path d="M60 55 Q90 35 90 55 L60 80 L90 80" stroke="#c9a96e" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M75 35 Q75 25 82 25 Q89 25 89 35" stroke="#c9a96e" stroke-width="1.5" fill="none" stroke-linecap="round"/></g><text x="50%" y="118" text-anchor="middle" font-family="Georgia" font-size="7" fill="#c9a96e" letter-spacing="4">COLLECTIONS</text></svg>
+      <div class="contact-brand-name">EMH</div><div class="contact-brand-sub">Designed by Chemistry</div>
+    </div>
+    <div class="contact-socials">
+      <a href="https://wa.me/${wa}" class="social-btn" target="_blank"><svg viewBox="0 0 24 24" fill="white" width="18"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
+      <a href="https://www.tiktok.com/@${tiktok}" class="social-btn" target="_blank"><svg viewBox="0 0 24 24" fill="white" width="18"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.19a8.12 8.12 0 004.74 1.52V6.27a4.85 4.85 0 01-.97-.58z"/></svg></a>
+      <a href="https://www.instagram.com/${ig}" class="social-btn" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" width="18"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="footer-logo"><svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="19" stroke="#c9a96e" stroke-width="1"/><path d="M14 28 L14 12 M14 20 L20 20 M26 12 L26 28" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg><span class="footer-logo-text">EMH Collections</span></div>
+  <div class="footer-links"><a href="#collection">Collections</a><a href="#about">About</a><a href="#contact">Contact</a></div>
+  <p class="footer-copy">© 2025 EMH Collections · Designed by Chemistry · All rights reserved</p>
+</footer>
+<script>
+const WA='${wa}';
+const products=${productsJS};
+const gradients=['linear-gradient(145deg,#f2d9d0,#e0b5a8)','linear-gradient(145deg,#e8e2dc,#d4cfc9)','linear-gradient(145deg,#1a1a1a,#3a2a2a)','linear-gradient(145deg,#f5f3f0,#e8d5b0)','linear-gradient(145deg,#2a2a1a,#4a3a2a)','linear-gradient(145deg,#e8c4b8,#c8a090)'];
+const featured=products.filter(p=>p.section==='featured'||!p.section);
+const arrivals=products.filter(p=>p.section==='arrivals');
+const grid=document.getElementById('productsGrid');
+featured.forEach((p,i)=>{
+  const card=document.createElement('div');card.className='product-card';
+  const img=p.images&&p.images[0]?'<img src="'+p.images[0]+'" alt="'+p.name+'" style="width:100%;height:100%;object-fit:cover">':'<div class="product-placeholder" style="background:'+gradients[i%gradients.length]+'"><svg viewBox="0 0 80 100" fill="none" stroke="#8B5E52" stroke-width="1" width="70" opacity="0.4"><ellipse cx="40" cy="20" rx="14" ry="16"/><path d="M26 33 Q18 55 16 80 Q16 95 40 97 Q64 95 64 80 Q62 55 54 33"/></svg></div>';
+  card.innerHTML='<div class="product-img-wrap" style="background:'+gradients[i%gradients.length]+'">'+img+(p.badge?'<span class="product-badge '+(p.badge==="New"?"new":"")+'">'+p.badge+'</span>':'')+'</div><div class="product-info"><div class="product-name">'+p.name+'</div><div class="product-desc">'+p.desc+'</div><div class="product-footer"><span class="product-price">'+p.price+'</span><button class="product-order-btn" onclick="order(\''+p.name+'\',\''+p.price+'\')"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Order</button></div></div>';
+  grid.appendChild(card);
+});
+if(!featured.length)grid.innerHTML='<p style="color:var(--grey-text);font-style:italic;font-family:var(--font-display);font-size:1.1rem;padding:2rem">New designs coming soon. Stay tuned! ✨</p>';
+const ag=document.getElementById('arrivalsGrid');
+arrivals.forEach((p,i)=>{
+  const div=document.createElement('div');div.className='arrival-card';
+  const img=p.images&&p.images[0]?'<img src="'+p.images[0]+'" alt="'+p.name+'" class="arrival-img">':'<div class="arrival-placeholder" style="background:linear-gradient(135deg,#2a1a1a,#4a2a2a)"></div>';
+  div.innerHTML=(p.badge?'<span class="arrival-label">'+p.badge+'</span>':'')+img+'<div class="arrival-overlay"><div class="product-name">'+p.name+'</div><div class="product-price">'+p.price+'</div><button onclick="order(\''+p.name+'\',\''+p.price+'\')" style="margin-top:.7rem;background:#25D366;color:white;border:none;padding:.5rem 1rem;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;font-family:var(--font-body)">Order via WhatsApp</button></div>';
+  ag.appendChild(div);
+});
+if(!arrivals.length)ag.innerHTML='<p style="color:rgba(255,255,255,.3);font-style:italic;font-family:var(--font-display);font-size:1.1rem;padding:2rem">New arrivals dropping soon! ✨</p>';
+function order(name,price){const msg='Hello EMH Collections! 👗\\n\\nI\\'m interested in:\\n\\n*Product:* '+name+'\\n*Price:* '+price+'\\n\\nPlease let me know availability. Thank you! ✨';window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(msg),'_blank')}
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',scrollY>40));
+document.getElementById('hamburger').addEventListener('click',()=>document.getElementById('mobileNav').classList.toggle('open'));
+const reveals=document.querySelectorAll('.reveal');
+const obs=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible')}),{threshold:.1});
+reveals.forEach(el=>obs.observe(el));
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function anim(){cursor.style.left=mx+'px';cursor.style.top=my+'px';rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(anim)})();
+document.querySelectorAll('a,button,.product-card,.arrival-card').forEach(el=>{el.addEventListener('mouseenter',()=>{cursor.classList.add('hover');ring.classList.add('hover')});el.addEventListener('mouseleave',()=>{cursor.classList.remove('hover');ring.classList.remove('hover')})});
+<\/script>
+</body>
+</html>`;
+}
+
+// ── RENDER ALL ──
+function renderAll() {
+  renderDashboard();
+  renderProductList();
+  loadSettingsForm();
+}
+
+// ── INIT ──
+load();
+// Pre-populate Enter key on login
+document.addEventListener('keydown', e => {
+  if (document.getElementById('loginScreen') && !document.getElementById('loginScreen').classList.contains('hidden') && e.key === 'Enter') login();
+});
+</script>
+</body>
+</html>
